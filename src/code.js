@@ -118,9 +118,46 @@ export function transform() {
     return node.type == 'ExpressionStatement' && node.expression.type == 'Identifier' && node.expression.name == '$$_noCheck';
   }
 
+  /**
+  * @param {acorn.Node} node 
+  */
+  function isFunctionCalled(node) {
+    let functionName;
+
+    if (node.type === 'FunctionDeclaration') {
+      functionName = node.id.name
+    } else if (node.type === 'ArrowFunctionExpression' || node.type === 'FunctionExpression') {
+      functionName = node._parent.id.name
+    }
+
+    if (!functionName) {
+      throw new Error('Unexpected')
+    }
+
+    let isCalled = false;
+
+    acornWalk.simple(ast, {
+      CallExpression(node) {
+        // TODO: Function name is not a unique identifier, so all function will the same name will be treated the same
+        if (node.callee.type === 'Identifier' && node.callee.name === functionName) {
+          isCalled = true;
+        }
+      }
+    });
+
+    return isCalled;
+  }
+
+  /**
+  * @param {acorn.Node} node 
+  */
+  function nodeHasSideEffects(node) {
+    return isFunctionCalled(node);
+  }
+
   function transformNode(node) {
     if(funcTypes[node.type] && node.body.body && node.body.body.length) {
-      if(node._parent.type == 'CallExpression' && node._parent.callee.name == '$onDestroy') return 'stop';
+      if (!nodeHasSideEffects(node)) return 'stop';
       for(let i = 0; i < node.body.body.length; i++) {
         let n = node.body.body[i];
         if(!isNoCheck(n)) continue;
