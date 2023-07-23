@@ -1,4 +1,6 @@
 import acorn from 'acorn';
+import acornWalk from 'acorn-walk'
+
 import astring from 'astring';
 import { assert, detectExpressionType, last } from './utils.js';
 import { xNode } from './xnode.js';
